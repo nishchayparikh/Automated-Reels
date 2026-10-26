@@ -1,0 +1,33 @@
+# Manual script and recorded narration update
+
+The existing application was extended in place. Its five animation templates, Remotion renderer, durable job queue, approval gates, schedules, OAuth connections and three publishing adapters remain in use.
+
+## Changed
+
+- Manual creation is the default: title, topic, English/Hindi/Hinglish, exact supplied script and optional official source links. Drafts can be saved without audio, edited and rejected. No script rewriting occurs.
+- Authenticated binary MP3/WAV/M4A uploads use configurable size limits, signature and actual stream/container validation, duration checks, local decoding and 48kHz mono PCM WAV normalization. File paths use generated UUIDs. Failed processing files are removed; replacing a recording removes its previous stored asset after committing the new revision. Recordings are private, with authenticated playback and the existing local/R2 storage abstraction.
+- The original script supplies caption text. Sentence reading-length estimates create short readable cues, visibly labelled approximate. Owners can edit each cue’s start/end and listen from its start. Scene durations are editable and must fill the measured recording duration. No paid service or automatic transcription is used for alignment, and no accurate word alignment is claimed.
+- Owners choose and configure 1–7 scenes manually. Script, recording, caption timing and storyboard are stored together. Script, audio, storyboard, platform text or timing edits invalidate approval and derived media, cancel pending stale jobs and prevent outdated publication. Upload/edit revision checks reject stale writes.
+- Manual rendering loads the private uploaded recording directly. It skips OpenAI, ElevenLabs, narration generation, usage reservations and word highlighting. Automatic AI planning is off by default. An explicit conversion action retains a legacy script/storyboard for reuse with an owner recording. Legacy generation remains optional behind `ENABLE_AI_FEATURES=true`; its fields and existing videos are preserved.
+- Migration `002_manual_workflow.sql` adds fields without deleting prior records and defaults planning/external publishing to disabled. Existing database was backed up before migration. README, environment example, sample seeding and demonstration/browser tools were updated.
+
+## Checks actually run
+
+- `npm test`: **38 tests passed**, including the original core/provider tests and new manual upload/timing/migration tests. These cover actual WAV, MP3 and M4A normalization; corrupt/wrong-format/unsupported/empty/oversize uploads; too-short/overlong recordings; video-bearing M4A rejection; processing cleanup; exact script retention; Hindi/Hinglish caption-text preservation; overlap/missing-word/out-of-range cue rejection; scene coverage; stale writes; recording/script/storyboard/timing approval invalidation; stale-render scheduling prevention; retry isolation; and legacy publishing contracts.
+- `npm run build`: TypeScript and production client build passed.
+- `npm run demo:manual`: complete authenticated API workflow with a clearly labelled local synthetic fixture. No OpenAI or ElevenLabs key was configured, paid AI calls were blocked by the runner, usage did not increase, and external publishing remained disabled. Approval and all three simulated publications completed.
+- Manual MP4 decoded fully with FFmpeg: approximately **49.94 seconds**, **1080×1920**, **30fps**, **H.264 + AAC**, with measured recording duration **49.9035s** and non-silent narration (mean approximately −23.6dB). Container duration differs by about 0.04s due to frame/AAC encoding padding; the recording is not truncated.
+- `npm run test:manual-ui`: Chrome checked all eight screens, create/save, invalid and valid uploads, audio playback, upload authentication and CSRF, server size rejection, timing validation/editing, scene editing, legacy-to-manual conversion, script retention, MP4 playback/dimensions/duration and mobile overflow. No browser page exceptions were reported.
+- `npm run test:ui`: the existing dashboard/browser test passed after adapting its create-draft controls; legacy Redis preview remains playable. `docker compose config --quiet` passed, and `npm audit` reported zero known vulnerabilities. The dependency set did not change.
+- Frames at 2, 12, 25, 37 and 46 seconds were inspected. Captions remain legible inside safe areas, code stays inert, and the original diagrams are preserved. A legacy “sample voice” footer was corrected so owner recordings and the labelled synthetic demonstration fixture are described accurately.
+
+Machine-readable evidence is in `artifacts/manual-demo-report.json` and `artifacts/manual-qa/browser-validation.json`. The exported demonstration is `artifacts/samples/manual-local-fixture.mp4`. The fixture is `fixtures/rag.wav`, generated locally for the earlier demo, not the owner’s real voice.
+
+## Limitations and remaining external setup
+
+- No reliable offline forced-alignment engine is bundled or installed. Initial times are reading-length estimates, not analysis of spoken words. Listen, edit, render and review; pauses, mismatched narration, fast speech and Hinglish pronunciation can require significant manual timing correction. Saving edited times does not turn them into certified speech alignment.
+- Recordings must be audio-only, 3 seconds to the configured limit (maximum 60 seconds), and within the configured upload size. Overlong recordings are rejected with replacement instructions; no automatic truncation or speed adjustment is applied.
+- Audio normalization mixes channels to mono. Uploads are buffered in memory up to the configured limit, then normalized locally. This is a single-owner app; start with the default 30MB limit. Replacement cleanup failures can leave obsolete private assets for maintenance; temporary decoding files are cleaned immediately.
+- The app cannot establish that the recording actually says the script. Caption-text consistency is enforced against the supplied script, and the owner checks the recording during preview.
+- The local manual demo and English visual/audio playback were tested. Hindi/Hinglish use the owner’s recording and bundled fonts without paid providers; their narration quality and a full multilingual render were not separately tested in this update.
+- Production R2 and real Instagram/Facebook/YouTube authorization/uploads remain account setup and live smoke tests. Provider adapters retain mocked contract tests; no real posts were made. Docker runtime testing remains pending because the host Docker daemon was unavailable in the original delivery.

@@ -1,0 +1,8 @@
+node_modules/
+.npm-cache/
+.env
+data/
+dist/
+.render-bundle/
+test-results/
+*.log
